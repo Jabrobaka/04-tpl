@@ -44,9 +44,15 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Crossword.cs" />
+    <Compile Include="CrosswordLine.cs" />
+    <Compile Include="CrosswordParser.cs" />
     <Compile Include="CrosswordSolver.cs" />
     <Compile Include="CrosswordSolverTests.cs" />
+    <Compile Include="CrosswordWriter.cs" />
     <Compile Include="ICrosswordSolver.cs" />
+    <Compile Include="LineAnalyzer.cs" />
+    <Compile Include="LineBlocks.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SolutionStatus.cs" />
