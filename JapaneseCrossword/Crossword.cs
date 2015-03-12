@@ -48,14 +48,14 @@ namespace JapaneseCrossword
             if (index == -1)
                 return null;
 
-            var count = isRow ? columnsCount : rowsCount;
+            var lineLength = isRow ? columnsCount : rowsCount;
             var lineInfo = isRow ? RowsInfo : ColumnsInfo;
-            var lineCells = new List<CrosswordCell>();
-            for (int i = 0; i < count; i++)
+            var lineCells = new CrosswordCell[lineLength];
+            for (int i = 0; i < lineLength; i++)
             {
                 var row = isRow ? index : i;
                 var col = isRow ? i : index;
-                lineCells.Add(Cells[row, col]);
+                lineCells[i] = Cells[row, col];
             }
             return new CrosswordLine(lineCells, lineInfo.ElementAt(index), index);
         }
@@ -86,9 +86,8 @@ namespace JapaneseCrossword
 
         private void SetLine(CrosswordLine line, bool isRow)
         {
-            var count = isRow ? columnsCount : rowsCount;
             var toRefresh = isRow ? ColumnsToRefresh : RowsToRefresh;
-            for (int i = 0; i < count; i++)
+            for (int i = 0; i < line.Length; i++)
             {
                 var row = isRow ? line.Index : i;
                 var col = isRow ? i : line.Index;
@@ -99,8 +98,6 @@ namespace JapaneseCrossword
                     toRefresh[i] = true;
                     Cells[row, col] = lineCell;
                 }
-
-                
             }
         }
 

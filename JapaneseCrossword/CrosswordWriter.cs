@@ -36,7 +36,7 @@ namespace JapaneseCrossword
                         var ch = GetCharRepresentation(crossword.Cells[i, j]);
                         file.Write(ch);
                     }
-                    file.Write("\n");
+                    file.Write("\r\n");
                 }
             }
         }

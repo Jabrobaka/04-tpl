@@ -25,13 +25,20 @@
             {
                 return SolutionStatus.BadOutputFilePath;
             }
+            //можно ведь как-то лучше это сделать. Печально, что двумерный массив нельзя линкой пройти
+            foreach (var cell in crossword.Cells)
+            {
+                if (cell == CrosswordCell.Unknown)
+                {
+                    return SolutionStatus.PartiallySolved;
+                }
+            }
 
             return SolutionStatus.Solved;
         }
 
         private void AnalyzeToEnd()
         {
-            var hasResult = false;
             while (crossword.HasLinesToUpldate())
             {
                 CrosswordLine line;
@@ -39,13 +46,12 @@
                 {
                     var analyzedLine = LineAnalyzer.UpdateLine(line);
                     crossword.SetRow(analyzedLine);
-                    line = null;
                 }
+
                 while ((line = crossword.GetColumnToRefresh()) != null)
                 {
                     var analyzedLine = LineAnalyzer.UpdateLine(line);
                     crossword.SetColumn(analyzedLine);
-                    line = null;
                 }
             }
         }

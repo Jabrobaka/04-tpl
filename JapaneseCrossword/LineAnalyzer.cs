@@ -20,33 +20,113 @@ namespace JapaneseCrossword
 
         private CrosswordLine AnalyzeCurrentLine()
         {
-            //первый блок может начинаться не с 1 ячейки
-            //конец цикла - минимально необходимое количество ячеек для остальных блоков
-            for (int i = 0; i < line.Length - (line.Block.Sum() - line.Block.FirstOrDefault() + line.Block.Count() - 1); i++)
+            if (AllBlocksDiscovered())
             {
-                //если до начала проверки уже есть черные - нет смысла проверять
-                if (i > 0 && line[i - 1] == CrosswordCell.Colored)
+                return MakeUnknownCellsEmpty();
+            }
+
+            //конец цикла - минимально необходимое количество ячеек для остальных блоков
+            for (int i = -1; i <= line.Length - (line.Block.Skip(1).Sum() + line.Block.Count() - 1); i++)
+            {
+                if (PreviousCellHasColor(i))
                     break;
                 
                 //можно-ли поместить все блоки, начиная с первого, если первый блок будет в i
                 if (CanPlaceBlocks(i, 0))
                 {
-                    //все ячейки до первого могут быть пустыми
-                    for (int j = 0; j < i; j++)
-                    {
-                        line.CanEmpty[j] = true;
-                    }
+                    PreviousCellCanEmpty(i);
                 }
             }
             return ApplyAnalysisResultsToLine();
         }
 
-        private static CrosswordLine BuildNewLine(CrosswordLine line)
+        private bool AllBlocksDiscovered()
         {
-            var cells = new CrosswordCell[line.Length];
-            var index = line.Index;
-            var blocks = line.Block.ToList();
-            return new CrosswordLine(cells, blocks, index);
+            return line.Block.Sum() == line.Cells.Count(c => c == CrosswordCell.Colored);
+        }
+
+        private CrosswordLine MakeUnknownCellsEmpty()
+        {
+            line.Cells = line.Cells
+                .Select(cell => cell != CrosswordCell.Unknown ? cell : CrosswordCell.Empty)
+                .ToArray();
+            return line;
+        }
+
+        private bool PreviousCellHasColor(int i)
+        {
+            return i > 0 && line[i - 1] == CrosswordCell.Colored;
+        }
+
+        private void PreviousCellCanEmpty(int i)
+        {
+            for (int j = 0; j < i; j++)
+            {
+                line.CanEmpty[j] = true;
+            }
+        }
+
+        //TODO: еще отрефакторить
+        private bool CanPlaceBlocks(int startIndex, int blockIndex)
+        {
+            var blockEndIndex = startIndex + line.Block.ElementAt(blockIndex);
+
+            if (blockEndIndex > line.Length) //если блок уже не поместится в линию
+                return false;
+
+            for (int i = startIndex; i < blockEndIndex; i++) //можно ли разместить текущий блок
+                if (line[i] == CrosswordCell.Empty) //если клетка точно пустая, блок не поместить
+                    return false;
+
+            if (NotLastBlock(blockIndex)) //рекурсия идет до последнего блока
+            {
+                return CheckRemainingCells(startIndex, blockIndex);
+            }
+
+            for (int i = blockEndIndex; i < line.Length; i++)
+                if (line[i] == CrosswordCell.Colored) //после последнего блока не должно быть закрашенных ячеек
+                    return false;
+            ColorCells(startIndex, blockEndIndex); //ячейки последнего блока могут быть черными
+            UncolorCells(blockEndIndex, line.Length); //оставшиеся могут быть пустыми
+            return true;
+        }
+
+        private bool CheckRemainingCells(int startIndex, int blockIndex)
+        {
+            var result = false;
+            var blockEndIndex = startIndex + line.Block.ElementAt(blockIndex);
+            for (int startNext = blockEndIndex + 1;
+                startNext <= line.Length - line.Block.ElementAt(blockIndex + 1) + 1;
+                startNext++)
+            {
+                if (PreviousCellHasColor(startIndex)) //если до начала блока есть черная клетка, то всё
+                    break;
+
+                if (CanPlaceBlocks(startNext, blockIndex + 1))
+                {
+                    result = true; //если следующие блоки можно расставить,
+                    ColorCells(startIndex, blockEndIndex); //значит ячейки текущего могут быть черными
+                    UncolorCells(blockEndIndex, startNext); //следовательно, ячейки до следующего блока могут быть пустыми
+                }
+            }
+            return result; //если блок не последний, то больше нечего делать
+        }
+
+        private bool NotLastBlock(int blockIndex)
+        {
+            return blockIndex != line.Block.Count() - 1;
+        }
+
+        private void UncolorCells(int start, int end)
+        {
+            for (int i = start; i < end; i++)
+                line.CanEmpty[i] = true;
+        }
+
+        private void ColorCells(int start, int end)
+        {
+            for (int i = start; i < end; i++)
+                line.CanColor[i] = true;
         }
 
         private CrosswordLine ApplyAnalysisResultsToLine()
@@ -71,60 +151,12 @@ namespace JapaneseCrossword
             return resultLine;
         }
 
-
-        //это ужас, но оригинал на паскале прибыл из пыточной камеры для программистов
-        //TODO: нужен серьезный рефакторинг
-        private bool CanPlaceBlocks(int startIndex, int blockIndex) 
+        private static CrosswordLine BuildNewLine(CrosswordLine line)
         {
-            var blockEndIndex = startIndex + line.Block.ElementAt(blockIndex);
-            if (blockEndIndex > line.Length) //если блок уже не поместится в линию
-                return false;
-            for (int i = startIndex; i < blockEndIndex; i++) //можно ли разместить текущий блок
-                if (line[i] == CrosswordCell.Empty) //если клетка точно пустая, блок не поместить
-                    return false;
-
-            if (blockIndex != line.Block.Count() - 1) //рекурсия идет до последнего блока
-            {
-                var result = false;
-                for (int startNext = blockEndIndex + 1;
-                    startNext <= line.Length - line.Block.ElementAt(blockIndex+1);
-                    startNext++)
-                {
-                    if (startIndex> 0 && line[startIndex - 1] == CrosswordCell.Colored) //если до начала блока есть черная клетка, то всё
-                        break;
-
-                    if (CanPlaceBlocks(startNext, blockIndex + 1))
-                    {
-                        result = true;                          
-                                                                //если следующие блоки можно расставить,
-                        ColorCells(startIndex, blockEndIndex);  //значит ячейки текущего могут быть черными
-
-                        UncolorCells(blockEndIndex, startNext); //следовательно, ячейки до следующего блока могут быть пустыми
-                    }
-                }
-                return result; //если блок не последний, то больше нечего делать
-            }
-
-            for (int i = blockEndIndex; i < line.Length; i++)
-                if (line[i] == CrosswordCell.Colored) //после последнего блока не должно быть закрашенных ячеек
-                    return false;
-
-            ColorCells(startIndex, blockEndIndex); //ячейки последнего блока могут быть черными
-            UncolorCells(blockEndIndex, line.Length); //оставшиеся могут быть пустыми
-            return true;
+            var cells = new CrosswordCell[line.Length];
+            var index = line.Index;
+            var blocks = line.Block.ToList();
+            return new CrosswordLine(cells, blocks, index);
         }
-
-        private void UncolorCells(int start, int end)
-        {
-            for (int i = start; i < end; i++) 
-                line.CanEmpty[i] = true; 
-        }
-
-        private void ColorCells(int start, int end)
-        {
-            for (int i = start; i < end; i++)
-                line.CanColor[i] = true;
-        }
-
     }
 }
