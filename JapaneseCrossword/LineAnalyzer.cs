@@ -20,13 +20,8 @@ namespace JapaneseCrossword
 
         private CrosswordLine AnalyzeCurrentLine()
         {
-            if (AllBlocksDiscovered())
-            {
-                return MakeUnknownCellsEmpty();
-            }
-
             //конец цикла - минимально необходимое количество ячеек для остальных блоков
-            for (int i = -1; i <= line.Length - (line.Block.Skip(1).Sum() + line.Block.Count() - 1); i++)
+            for (int i = 0; i <= line.Length - (line.Block.Sum() + line.Block.Count() - 1); i++)
             {
                 if (PreviousCellHasColor(i))
                     break;
@@ -99,7 +94,7 @@ namespace JapaneseCrossword
                 startNext <= line.Length - line.Block.ElementAt(blockIndex + 1) + 1;
                 startNext++)
             {
-                if (PreviousCellHasColor(startIndex)) //если до начала блока есть черная клетка, то всё
+                if (PreviousCellHasColor(startNext)) //если до начала блока есть черная клетка, то всё
                     break;
 
                 if (CanPlaceBlocks(startNext, blockIndex + 1))
