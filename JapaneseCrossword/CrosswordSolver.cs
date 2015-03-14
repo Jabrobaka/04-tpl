@@ -1,8 +1,11 @@
-﻿namespace JapaneseCrossword
+﻿using System;
+using System.Linq;
+
+namespace JapaneseCrossword
 {
     public class CrosswordSolver : ICrosswordSolver
     {
-        private Crossword crossword;
+        protected Crossword crossword;
 
         public SolutionStatus Solve(string inputFilePath, string outputFilePath)
         {
@@ -25,6 +28,7 @@
             {
                 return SolutionStatus.BadOutputFilePath;
             }
+
             //можно ведь как-то лучше это сделать. Печально, что двумерный массив нельзя линкой пройти
             foreach (var cell in crossword.Cells)
             {
@@ -37,23 +41,32 @@
             return SolutionStatus.Solved;
         }
 
-        private void AnalyzeToEnd()
+        protected virtual void AnalyzeToEnd()
         {
             while (crossword.HasLinesToUpldate())
             {
-                CrosswordLine line;
-                while ((line = crossword.GetRowToRefresh()) != null)
-                {
-                    var analyzedLine = LineAnalyzer.UpdateLine(line);
-                    crossword.SetRow(analyzedLine);
-                }
+                var lines = crossword
+                    .GetRowsToRefresh()
+                    .ToList();
+                lines.ForEach(line => AnalyzeLine(line, crossword.SetRow));
 
-                while ((line = crossword.GetColumnToRefresh()) != null)
-                {
-                    var analyzedLine = LineAnalyzer.UpdateLine(line);
-                    crossword.SetColumn(analyzedLine);
-                }
+                lines = crossword
+                    .GetColumnsToRefresh()
+                    .ToList();
+                lines.ForEach(line => AnalyzeLine(line, crossword.SetColumn));
             }
+        }
+
+        protected void AnalyzeLine(CrosswordLine line, Action<CrosswordLine> lineSetter)
+        {
+            var analyzer = new LineAnalyzer(line);
+            var analyzedLine = analyzer.AnalyzeLine();
+            lineSetter(analyzedLine);
+        }
+
+        public override string ToString()
+        {
+            return "Single thread solver"; //для сравнения солверов
         }
     }
 }

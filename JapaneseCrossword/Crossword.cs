@@ -1,9 +1,10 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using NUnit.Framework;
 
 namespace JapaneseCrossword
 {
-    class Crossword
+    public class Crossword
     {
         private readonly int rowsCount;
         private readonly int columnsCount;
@@ -11,7 +12,7 @@ namespace JapaneseCrossword
         public IEnumerable<IEnumerable<int>> ColumnsInfo { get; private set; }
         public CrosswordCell[,] Cells { get; private set; }
         public bool[] RowsToRefresh { get; private set; }
-        public bool[] ColumnsToRefresh { get; set; }
+        public bool[] ColumnsToRefresh { get; private set; }
 
         public Crossword(IEnumerable<IEnumerable<int>> rowsInfo, IEnumerable<IEnumerable<int>> columnsInfo)
         {
@@ -32,24 +33,30 @@ namespace JapaneseCrossword
                 .ToArray();
         }
 
-        public CrosswordLine GetRowToRefresh()
+        public IEnumerable<CrosswordLine> GetRowsToRefresh()
         {
-            return GetLine(true);
+            return GetLines(true);
         }
 
-        public CrosswordLine GetColumnToRefresh()
+        public IEnumerable<CrosswordLine> GetColumnsToRefresh()
         {
-            return GetLine(false);
+            return GetLines(false);
         }
 
-        private CrosswordLine GetLine(bool isRow)
+        private IEnumerable<CrosswordLine> GetLines(bool isRow)
         {
-            var index = GetIndexOfNeedtoRefresh(isRow);
-            if (index == -1)
-                return null;
-
-            var lineLength = isRow ? columnsCount : rowsCount;
+            var toRefresh = isRow ? RowsToRefresh : ColumnsToRefresh;
             var lineInfo = isRow ? RowsInfo : ColumnsInfo;
+
+            for (int i = 0; i < toRefresh.Length; i++)
+            {
+                yield return new CrosswordLine(GetLineCells(i, isRow), lineInfo.ElementAt(i), i);
+            }
+        }
+
+        private IEnumerable<CrosswordCell> GetLineCells(int index, bool isRow)
+        {
+            var lineLength = isRow ? columnsCount : rowsCount;
             var lineCells = new CrosswordCell[lineLength];
             for (int i = 0; i < lineLength; i++)
             {
@@ -57,19 +64,7 @@ namespace JapaneseCrossword
                 var col = isRow ? i : index;
                 lineCells[i] = Cells[row, col];
             }
-            return new CrosswordLine(lineCells, lineInfo.ElementAt(index), index);
-        }
-
-        private int GetIndexOfNeedtoRefresh(bool isRow)
-        {
-            var arr = isRow ? RowsToRefresh : ColumnsToRefresh;
-            if (arr.Any(r => r))
-            {
-                var nextLine = arr.First(r => r);
-                var index = arr.ToList().IndexOf(nextLine);
-                return index;
-            }
-            return -1;
+            return lineCells;
         }
 
         public void SetRow(CrosswordLine line)
@@ -112,5 +107,54 @@ namespace JapaneseCrossword
         Unknown,
         Colored,
         Empty
+    }
+
+    [TestFixture]
+    class Crossword_should
+    {
+        [Test]
+        public void create_correct_number_of_cells()
+        {
+            var rowsCount = 5;
+            var columnsCount = 50;
+            var rowinfo = Enumerable.Range(0, columnsCount).Select(i => new[] {1,2,3});
+            var colinfo = Enumerable.Range(0, rowsCount).Select(i => new[]{999,888,777});
+
+            var crossword = new Crossword(rowinfo, colinfo);
+
+            Assert.That(crossword.Cells.GetLength(0), Is.EqualTo(columnsCount));
+            Assert.That(crossword.Cells.GetLength(1), Is.EqualTo(rowsCount));
+        }
+
+        [Test]
+        public void mark_inserted_line_as_no_needed_to_refresh()
+        {
+            var rowinfo = Enumerable.Range(0, 5).Select(i => new[] {1, 2});
+            var colinfo = Enumerable.Range(0, 8).Select(i => new[] {2, 1});
+            var crossword = new Crossword(rowinfo, colinfo);
+            var columnIndex = 2;
+            var lineCells = Enumerable.Range(0, 5).Select(i => CrosswordCell.Empty);
+            var line = new CrosswordLine(lineCells, new[] {1, 2}, columnIndex);
+
+            crossword.SetColumn(line);
+
+            Assert.That(crossword.ColumnsToRefresh[columnIndex], Is.EqualTo(false));
+        }
+
+        //маркировать перепендикулярную линию, как нужню для обновления, если вставить линию, которая меняет ячейку перп. линии
+        [Test]
+        public void mark_perpendicular_line_to_refresh_when_insert_line_that_changes_perp_line_cell()
+        {
+            var rowinfo = Enumerable.Range(0, 10).Select(i => new[] {1, 1});
+            var colinfo = Enumerable.Range(0, 3).Select(i => new[] {2, 2});
+            var crossword = new Crossword(rowinfo, colinfo);
+            var cells = Enumerable.Range(0, 10)
+                .Select(i => CrosswordCell.Unknown);
+            crossword.SetColumn(new CrosswordLine(cells, new[] {1}, 2)); //здесь 3-я колонка помечается как не нуждающаяся в обновлении
+
+            crossword.SetRow(new CrosswordLine(new[] {CrosswordCell.Colored, CrosswordCell.Empty, CrosswordCell.Colored}, new[]{1,1}, 0));
+
+            Assert.That(crossword.ColumnsToRefresh[2], Is.EqualTo(true));
+        }
     }
 }
