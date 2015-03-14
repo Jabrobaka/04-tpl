@@ -49,6 +49,7 @@
     <Compile Include="CrosswordParser.cs" />
     <Compile Include="CrosswordSolver.cs" />
     <Compile Include="CrosswordSolverTests.cs" />
+    <Compile Include="CrosswordSolverTPL.cs" />
     <Compile Include="CrosswordWriter.cs" />
     <Compile Include="ICrosswordSolver.cs" />
     <Compile Include="LineAnalyzer.cs" />
