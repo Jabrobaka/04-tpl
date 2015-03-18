@@ -7,28 +7,28 @@ namespace JapaneseCrossword
     public class CrosswordLine
     {
         public CrosswordCell[] Cells { get; private set; }
-        public IEnumerable<int> Block { get; private set; }
+        public int[] Blocks { get; private set; }
         public bool[] CanColor { get; set; }
         public bool[] CanEmpty { get; set; }
         public int Length { get; private set; }
         public int Index { get; private set; }
 
-        public CrosswordLine(IEnumerable<CrosswordCell> lineCells, IEnumerable<int> blocks, int index)
+        public CrosswordLine(CrosswordCell[] cells, IEnumerable<int> blocks, int index)
         {
-            Cells = lineCells.ToArray();
-            Block = blocks;
+            Cells = cells;
+            Blocks = blocks.ToArray();
 
             ValidateLine();
 
             CanColor = new bool[Cells.Length];
             CanEmpty = new bool[Cells.Length];
-            Length = Cells.Length;
+            Length = cells.Length;
             Index = index;
         }
 
         private void ValidateLine()
         {
-            if (Block.Sum() + Block.Count() - 1 > Cells.Length)
+            if (Blocks.Sum() + Blocks.Length - 1 > Cells.Length)
             {
                 throw new IncorrectCrosswordException();
             }
@@ -36,7 +36,7 @@ namespace JapaneseCrossword
 
         public CrosswordCell this[int index]
         {
-            get { return Cells.ElementAt(index); }
+            get { return Cells[index]; }
             set { Cells[index] = value; }
         }
     }

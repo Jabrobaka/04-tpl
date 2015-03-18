@@ -13,33 +13,15 @@ namespace JapaneseCrossword
 
         public CrosswordLine AnalyzeLine()
         {
-            //конец цикла - минимально необходимое количество ячеек для остальных блоков
-            for (int i = 0; i <= line.Length - (line.Block.Sum() + line.Block.Count() - 1); i++)
-            {
-                if (PreviousCellHasColor(i))
-                    break;
-                
-                if (CanPlaceBlocks(i, 0))
-                {
-                    PreviousCellCanBeEmpty(i);
-                }
-            }
+            CanPlaceBlocks(-1, -1); 
+
             return ApplyAnalysisResultsToLine();
         }
 
         private bool PreviousCellHasColor(int i)
         {
-            return i > 0 && line[i - 1] == CrosswordCell.Colored;
+            return i > 0 && line.Cells[i - 1] == CrosswordCell.Colored;
         }
-
-        private void PreviousCellCanBeEmpty(int i)
-        {
-            for (int j = 0; j < i; j++)
-            {
-                line.CanEmpty[j] = true;
-            }
-        }
-
 
         /// <summary>
         /// можно-ли поместить все блоки, начиная с блока с номером <paramref name="blockIndex"/>,
@@ -47,12 +29,15 @@ namespace JapaneseCrossword
         /// </summary>
         private bool CanPlaceBlocks(int startIndex, int blockIndex)
         {
-            var blockEndIndex = startIndex + line.Block.ElementAt(blockIndex);
-
-            if (blockEndIndex > line.Length) //если блок уже не поместится в линию
-                return false;
-
-            if (!CanPlaceCurrentBlock(startIndex, blockEndIndex)) return false;
+            var blockEndIndex = startIndex;
+            if (blockEndIndex != -1)
+            {
+                blockEndIndex += line.Blocks[blockIndex];
+                if (blockEndIndex > line.Length) //если блок уже не поместится в линию
+                    return false;
+                if (!CanPlaceCurrentBlock(startIndex, blockEndIndex))
+                    return false;
+            }
 
             if (!IsLastBlock(blockIndex)) 
             {
@@ -69,7 +54,7 @@ namespace JapaneseCrossword
         private bool HasColorCellAfterLastBlock(int blockEndIndex)
         {
             for (int i = blockEndIndex; i < line.Length; i++)
-                if (line[i] == CrosswordCell.Colored)
+                if (line.Cells[i] == CrosswordCell.Colored)
                     return true;
             return false;
         }
@@ -77,7 +62,7 @@ namespace JapaneseCrossword
         private bool CanPlaceCurrentBlock(int startIndex, int blockEndIndex)
         {
             for (int i = startIndex; i < blockEndIndex; i++)
-                if (line[i] == CrosswordCell.Empty)
+                if (line.Cells[i] == CrosswordCell.Empty)
                     return false;
             return true;
         }
@@ -85,9 +70,9 @@ namespace JapaneseCrossword
         private bool CheckRemainingCells(int startIndex, int blockIndex)
         {
             var result = false;
-            var blockEndIndex = startIndex + line.Block.ElementAt(blockIndex);
+            var blockEndIndex = startIndex + (blockIndex == -1 ? 0 : line.Blocks[blockIndex]);
             for (int startNext = blockEndIndex + 1;
-                startNext <= line.Length - line.Block.ElementAt(blockIndex + 1) + 1;
+                startNext <= line.Length - line.Blocks[blockIndex + 1] + 1;
                 startNext++)
             {
                 if (PreviousCellHasColor(startNext)) 
@@ -95,9 +80,13 @@ namespace JapaneseCrossword
 
                 if (CanPlaceBlocks(startNext, blockIndex + 1))
                 {
-                    result = true; 
-                    ColorCells(startIndex, blockEndIndex);
-                    UncolorCells(blockEndIndex, startNext);
+                    result = true;
+                    if (blockIndex != -1)
+                    {
+                        ColorCells(startIndex, blockEndIndex);
+                        UncolorCells(blockEndIndex, startNext);
+                    }
+                    else UncolorCells(0, startNext);
                 }
             }
             return result;
@@ -105,7 +94,7 @@ namespace JapaneseCrossword
 
         private bool IsLastBlock(int blockIndex)
         {
-            return blockIndex == line.Block.Count() - 1;
+            return blockIndex == line.Blocks.Length - 1;
         }
 
         private void UncolorCells(int start, int end)
@@ -128,7 +117,7 @@ namespace JapaneseCrossword
                     throw new IncorrectCrosswordException();
 
                 if (line.CanColor[i] != line.CanEmpty[i]) //нашли какое-то точное состояние ячейки
-                    line[i] = line.CanColor[i] ? CrosswordCell.Colored : CrosswordCell.Empty;
+                    line.Cells[i] = line.CanColor[i] ? CrosswordCell.Colored : CrosswordCell.Empty;
             }
             return line;
         }

@@ -63,4 +63,5 @@ namespace JapaneseCrossword
     internal class BadOutputFileException : Exception
     {
     }
+
 }

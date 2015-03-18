@@ -46,7 +46,7 @@ namespace JapaneseCrossword
             {
                 columnsInfo.Add(LineBlocks.FromString(fileLines[columnsSectionIndex + 1 + i], rowsCount));
             }
-            
+
             return new Crossword(rowsInfo, columnsInfo);
         }
 
@@ -74,19 +74,11 @@ namespace JapaneseCrossword
         }
 
         [Test]
-        public void return_instance_on_correct_path()
-        {
-            var path = @"TestFiles\SampleInput.txt";
-            var cw = CrosswordParser.ParseCrossword(path);
-            Assert.That(cw, Is.InstanceOf(typeof(Crossword)));
-        }
-
-        [Test]
-        public void return_correct_count_of_lines()
+        public void return_correct_count_of_cells()
         {
             var path = @"TestFiles\Car.txt";
             var cw = CrosswordParser.ParseCrossword(path);
-            Assert.That(cw.ColumnsInfo.Count() + cw.RowsInfo.Count(), Is.EqualTo(18));
+            Assert.That(cw.Cells.Length, Is.EqualTo(80));
         }
 
     }

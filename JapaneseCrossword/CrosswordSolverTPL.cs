@@ -10,40 +10,29 @@ namespace JapaneseCrossword
         {
             try
             {
-                while (crossword.HasLinesToUpldate())
+                var i = 0;
+                var rowHasLessLength = rowsToUpdate.Length < columnsToUpdate.Length;
+                while (HasLinesToUpdate())
                 {
-                    var rows = crossword
-                        .GetRowsToRefresh()
-                        .Select(line => Task.Run(() => AnalyzeLine(line, SetLine(true))));
+                    var tasks = GetLinesToUpdate(rowHasLessLength)
+                        .Select(line => Task.Run(() =>
+                        {
+                            AnalyzeLine(line, rowHasLessLength);
+                            Console.WriteLine(i++);
+                        }));
 
-                    Task.WaitAll(rows.ToArray());
+                    Task.WaitAll(tasks.ToArray());
 
-                    var columns = crossword
-                        .GetColumnsToRefresh()
-                        .Select(line => Task.Run(() => AnalyzeLine(line, SetLine(false))));
-                    Task.WaitAll(columns.ToArray());
+                    tasks = GetLinesToUpdate(!rowHasLessLength)
+                        .Select(line => Task.Run(() => AnalyzeLine(line, !rowHasLessLength))); 
+
+                    Task.WaitAll(tasks.ToArray());
                 }
             }
             catch (AggregateException e)
             {
                 throw new IncorrectCrosswordException();
             }
-        }
-
-        private Action<CrosswordLine> SetLine(bool isRow)
-        {
-            //инлайн условие жалуется на метод групп
-            Action<CrosswordLine> setAction;
-            if (isRow)
-                setAction = crossword.SetRow;
-            else setAction =  crossword.SetColumn;
-            return line =>
-            {
-                lock (crossword)
-                {
-                    setAction(line);
-                }
-            };
         }
 
         public override string ToString()
