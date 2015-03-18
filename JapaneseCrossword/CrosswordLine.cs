@@ -4,7 +4,7 @@ using NUnit.Framework;
 
 namespace JapaneseCrossword
 {
-    public class CrosswordLine
+    public class CrosswordLine 
     {
         public CrosswordCell[] Cells { get; private set; }
         public int[] Blocks { get; private set; }

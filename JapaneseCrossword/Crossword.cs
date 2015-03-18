@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 
 namespace JapaneseCrossword
@@ -7,54 +8,82 @@ namespace JapaneseCrossword
     {
         private List<IEnumerable<int>> RowsInfo;
         private List<IEnumerable<int>> ColumnsInfo;
-        private int rowsCount;
-        private int columnsCount;
-        public CrosswordCell[,] Cells { get; set; }
+        private bool[] columnsToUpdate;
+        private bool[] rowsToUpdate;
+        public CrosswordCell[,] Cells { get; private set; }
 
         public Crossword(IEnumerable<IEnumerable<int>> rowsInfo, IEnumerable<IEnumerable<int>> columnsInfo)
         {
             RowsInfo = rowsInfo.ToList();
             ColumnsInfo = columnsInfo.ToList();
-            rowsCount = RowsInfo.Count();
-            columnsCount = ColumnsInfo.Count();
-            Cells = new CrosswordCell[rowsCount, columnsCount];
+            rowsToUpdate = InitFlagsArray(RowsInfo.Count);
+            columnsToUpdate = InitFlagsArray(ColumnsInfo.Count);
+            Cells = new CrosswordCell[rowsToUpdate.Length, columnsToUpdate.Length];
         }
 
-        public CrosswordCell this[int row, int col]
+        private static bool[] InitFlagsArray(int count)
         {
-            get { return Cells[row, col]; }
-            set { Cells[row, col] = value; }
+            return Enumerable
+                .Range(0, count)
+                .Select(i => true)
+                .ToArray();
         }
 
-        public CrosswordLine GetRowByIndex(int index)
+        public bool HasLinesToUpdate()
         {
-            return GetLine(index, true);
+            return rowsToUpdate.Any(l => l) || columnsToUpdate.Any(l => l);
         }
 
-        public CrosswordLine GetColumnByIndex(int index)
+        public void SetLine(CrosswordLine line, LineType type)
         {
-            return GetLine(index, false);
-        }
-//
-        private CrosswordLine GetLine(int index, bool isRow)
-        {
-            var lineInfo = isRow ? RowsInfo : ColumnsInfo;
-            return new CrosswordLine(GetLineCells(index, isRow), lineInfo.ElementAt(index), index);
+            var toUpdate = type == LineType.Row ? columnsToUpdate : rowsToUpdate;
+            for (int i = 0; i < line.Length; i++)
+            {
+                var row = type == LineType.Row ? line.Index : i;
+                var col = type == LineType.Row ? i : line.Index;
+                if (Cells[row, col] != line[i])
+                {
+                    toUpdate[i] = true;
+                    Cells[row, col] = line[i];
+                }
+            }
+            (type == LineType.Row ? rowsToUpdate : columnsToUpdate)[line.Index] = false;
         }
 
-        private CrosswordCell[] GetLineCells(int index, bool isRow)
+        public IEnumerable<CrosswordLine> GetLinesToUpdate(LineType type)
         {
-            var lineLength = isRow ? columnsCount : rowsCount;
+            var toUpdate = type == LineType.Row ? rowsToUpdate : columnsToUpdate;
+            for (int i = 0; i < toUpdate.Length; i++)
+            {
+                if (toUpdate[i])
+                    yield return GetLine(new LineDescription(i, type));
+            }
+        }
+
+        private CrosswordLine GetLine(LineDescription description)
+        {
+            var lineInfo = description.Type == LineType.Row ? RowsInfo : ColumnsInfo;
+            return new CrosswordLine(GetLineCells(description), lineInfo.ElementAt(description.Index), description.Index);
+        }
+
+        private CrosswordCell[] GetLineCells(LineDescription desc)
+        {
+            var lineLength = desc.Type == LineType.Row ? columnsToUpdate.Length : rowsToUpdate.Length;
             var lineCells = new CrosswordCell[lineLength];
+            var cellGetter = GetCellsGetter(desc);
             for (int i = 0; i < lineLength; i++)
             {
-                var row = isRow ? index : i;
-                var col = isRow ? i : index;
-                lineCells[i] = Cells[row, col];
+                lineCells[i] = cellGetter(i);
             }
             return lineCells.ToArray();
         }
 
+        private Func<int, CrosswordCell> GetCellsGetter(LineDescription desc)
+        {
+            if (desc.Type == LineType.Row)
+                return i => Cells[desc.Index, i];
+            return i => Cells[i, desc.Index];
+        }
     }
 
     public enum CrosswordCell

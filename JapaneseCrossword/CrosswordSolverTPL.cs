@@ -10,28 +10,36 @@ namespace JapaneseCrossword
         {
             try
             {
-                var i = 0;
-                var rowHasLessLength = rowsToUpdate.Length < columnsToUpdate.Length;
-                while (HasLinesToUpdate())
+                var typeTuple = GetCrosswordLineTypes();
+                while (crossword.HasLinesToUpdate())
                 {
-                    var tasks = GetLinesToUpdate(rowHasLessLength)
-                        .Select(line => Task.Run(() =>
-                        {
-                            AnalyzeLine(line, rowHasLessLength);
-                            Console.WriteLine(i++);
-                        }));
+                    var tasks = crossword
+                        .GetLinesToUpdate(typeTuple.Item1)
+                        .Select(line => Task.Run(() => AnalyzeLine(line, typeTuple.Item1)))
+                        .ToArray();
 
-                    Task.WaitAll(tasks.ToArray());
 
-                    tasks = GetLinesToUpdate(!rowHasLessLength)
-                        .Select(line => Task.Run(() => AnalyzeLine(line, !rowHasLessLength))); 
+                    Task.WaitAll(tasks);
 
-                    Task.WaitAll(tasks.ToArray());
+                    tasks = crossword
+                        .GetLinesToUpdate(typeTuple.Item2)
+                        .Select(line => Task.Run(() => AnalyzeLine(line, typeTuple.Item2)))
+                        .ToArray();
+
+                    Task.WaitAll(tasks);
                 }
             }
             catch (AggregateException e)
             {
                 throw new IncorrectCrosswordException();
+            }
+        }
+
+        protected override void UpdateCrossword(LineType type, CrosswordLine analyzed)
+        {
+            lock (crossword)
+            {
+                crossword.SetLine(analyzed, type);
             }
         }
 
