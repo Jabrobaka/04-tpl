@@ -13,26 +13,23 @@ namespace JapaneseCrossword
             var TPLSolver = new CrosswordSolverTPL();
 
             var crosswords = Directory
-                .EnumerateFiles(@"SpeedTestFiles\")
+                .EnumerateFiles(@"TestFiles\")
                 .Where(fname => !fname.Contains("solved"));
 
             var watch = new Stopwatch();
 
             foreach (var crossword in crosswords)
             {
-                try
-                {
-                    Console.WriteLine(crossword);
-                    watch.Restart();
-                    TPLSolver.Solve(crossword, Path.GetRandomFileName());
-                    Report(crossword, watch, TPLSolver);
-                    watch.Restart();
-                    singleThreadSolver.Solve(crossword, Path.GetRandomFileName());
-                    Report(crossword, watch, singleThreadSolver);
-                }
-                catch (Exception)
-                {
-                }
+                if (crossword.Contains("Incorrect"))
+                    continue;
+
+                Console.WriteLine(crossword);
+                watch.Restart();
+                TPLSolver.Solve(crossword, Path.GetRandomFileName());
+                Report(crossword, watch, TPLSolver);
+                watch.Restart();
+                singleThreadSolver.Solve(crossword, Path.GetRandomFileName());
+                Report(crossword, watch, singleThreadSolver);
             }
             Console.WriteLine("Test done!");
         }
