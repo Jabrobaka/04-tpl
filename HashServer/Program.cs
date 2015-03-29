@@ -11,10 +11,14 @@ namespace HashServer
 {
 	class Program
 	{
-		private static int delayMs = 1000;
+		private static int delayMs = 2000;
 
 		static void Main(string[] args)
 		{
+		    if (args.Length > 0)
+		    {
+		        port = int.Parse(args[0]);
+		    }
 			XmlConfigurator.Configure();
 			try
 			{
@@ -86,7 +90,7 @@ namespace HashServer
 				return hasher.ComputeHash(data);
 		}
 
-		private const int port = 20000;
+		private static int port = 20000;
 		private static readonly byte[] Key = Encoding.UTF8.GetBytes("Контур.Шпора");
 		private static readonly ILog log = LogManager.GetLogger(typeof(Program));
 	}
